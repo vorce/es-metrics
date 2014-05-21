@@ -20,6 +20,7 @@
 package org.elasticsearch.action.search.type;
 
 import com.carrotsearch.hppc.IntArrayList;
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.search.ScoreDoc;
 import org.elasticsearch.ElasticsearchIllegalStateException;
 import org.elasticsearch.action.ActionListener;
@@ -36,6 +37,8 @@ import org.elasticsearch.cluster.routing.GroupShardsIterator;
 import org.elasticsearch.cluster.routing.ShardIterator;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.common.Nullable;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.util.concurrent.AtomicArray;
 import org.elasticsearch.search.SearchPhaseResult;
@@ -150,7 +153,14 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
                 shardIndex++;
                 final ShardRouting shard = shardIt.nextOrNull();
                 if (shard != null) {
-                    performFirstPhase(shardIndex, shardIt, shard);
+                    boolean nonLocal = !shard.currentNodeId().equals(nodes.localNodeId());
+                    if(nonLocal) {
+                        long t = System.currentTimeMillis();
+                        performFirstPhase(shardIndex, shardIt, shard);
+                        MetricsLogger.logger.info("Shard {}. Remote First Phase. Duration {}", shard.getId(), (System.currentTimeMillis()-t));
+                    } else {
+                        performFirstPhase(shardIndex, shardIt, shard);
+                    }
                 } else {
                     // really, no shards active in this group
                     onFirstPhaseResult(shardIndex, null, null, shardIt, new NoShardAvailableActionException(shardIt.shardId()));
@@ -167,11 +177,15 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
                 if (node == null) {
                     onFirstPhaseResult(shardIndex, shard, null, shardIt, new NoShardAvailableActionException(shardIt.shardId()));
                 } else {
+                    long t = System.currentTimeMillis();
                     String[] filteringAliases = clusterState.metaData().filteringAliases(shard.index(), request.indices());
+                    MetricsLogger.logger.info("Shard {}. First Phase index filtering, Duration {}", shard.getId(), System.currentTimeMillis()-t);
                     sendExecuteFirstPhase(node, internalSearchRequest(shard, shardsIts.size(), request, filteringAliases, startTime, useSlowScroll), new SearchServiceListener<FirstResult>() {
                         @Override
                         public void onResult(FirstResult result) {
+                            long t = System.currentTimeMillis();
                             onFirstPhaseResult(shardIndex, shard, result, shardIt);
+                            MetricsLogger.logger.info("Shard {}. First Phase result processing. Duration {}", shard.getId(), System.currentTimeMillis()-t);
                         }
 
                         @Override
@@ -195,7 +209,9 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
             final int xTotalOps = totalOps.addAndGet(shardIt.remaining() + 1);
             if (xTotalOps == expectedTotalOps) {
                 try {
+                    long t = System.currentTimeMillis();
                     innerMoveToSecondPhase();
+                    MetricsLogger.logger.info("Shard {}. Second Phase. Duration {}", shard.getId(), System.currentTimeMillis()-t);
                 } catch (Throwable e) {
                     if (logger.isDebugEnabled()) {
                         logger.debug(shardIt.shardId() + ": Failed to execute [" + request + "] while moving to second phase", e);

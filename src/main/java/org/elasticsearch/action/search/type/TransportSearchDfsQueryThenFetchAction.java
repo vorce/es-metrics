@@ -20,6 +20,7 @@
 package org.elasticsearch.action.search.type;
 
 import com.carrotsearch.hppc.IntArrayList;
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.search.ScoreDoc;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.ReduceSearchPhaseException;
@@ -94,7 +95,15 @@ public class TransportSearchDfsQueryThenFetchAction extends TransportSearchTypeA
                 DfsSearchResult dfsResult = entry.value;
                 DiscoveryNode node = nodes.get(dfsResult.shardTarget().nodeId());
                 QuerySearchRequest querySearchRequest = new QuerySearchRequest(request, dfsResult.id(), dfs);
-                executeQuery(entry.index, dfsResult, counter, querySearchRequest, node);
+                
+                boolean nonLocal = !node.id().equals(nodes.localNodeId());
+                if (nonLocal) {
+                    MetricsLogger.logger.info("Second Phase remote query execution. DFS {}, start: {}", dfsResult.id(), System.currentTimeMillis());
+                    executeQuery(entry.index, dfsResult, counter, querySearchRequest, node);
+                    MetricsLogger.logger.info("Second Phase remote query execution. DFS {}, end: {}", dfsResult.id(), System.currentTimeMillis());
+                } else {
+                    executeQuery(entry.index, dfsResult, counter, querySearchRequest, node);
+                }
             }
         }
 
@@ -105,7 +114,9 @@ public class TransportSearchDfsQueryThenFetchAction extends TransportSearchTypeA
                     result.shardTarget(dfsResult.shardTarget());
                     queryResults.set(shardIndex, result);
                     if (counter.decrementAndGet() == 0) {
+                        MetricsLogger.logger.info("Fetch Phase. Request {}, start: {}", querySearchRequest.id(), System.currentTimeMillis());
                         executeFetchPhase();
+                        MetricsLogger.logger.info("Fetch Phase. Request {}, end: {}", querySearchRequest.id(), System.currentTimeMillis());
                     }
                 }
 

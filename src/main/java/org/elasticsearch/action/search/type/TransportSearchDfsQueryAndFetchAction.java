@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.search.type;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.ReduceSearchPhaseException;
 import org.elasticsearch.action.search.SearchRequest;
@@ -85,7 +86,9 @@ public class TransportSearchDfsQueryAndFetchAction extends TransportSearchTypeAc
                 DfsSearchResult dfsResult = entry.value;
                 DiscoveryNode node = nodes.get(dfsResult.shardTarget().nodeId());
                 QuerySearchRequest querySearchRequest = new QuerySearchRequest(request, dfsResult.id(), dfs);
+                MetricsLogger.logger.info("Second Phase query execution. Request {}, start: {}", querySearchRequest.id(), System.currentTimeMillis());
                 executeSecondPhase(entry.index, dfsResult, counter, node, querySearchRequest);
+                MetricsLogger.logger.info("Second Phase query execution. Request {}, start: {}", querySearchRequest.id(), System.currentTimeMillis());
             }
         }
 

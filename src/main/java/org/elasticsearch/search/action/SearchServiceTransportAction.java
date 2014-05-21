@@ -19,6 +19,7 @@
 
 package org.elasticsearch.search.action;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.ClearScrollRequest;
@@ -203,7 +204,10 @@ public class SearchServiceTransportAction extends AbstractComponent {
             execute(new Callable<QuerySearchResult>() {
                 @Override
                 public QuerySearchResult call() throws Exception {
-                    return searchService.executeQueryPhase(request);
+                    long t = System.currentTimeMillis();
+                    QuerySearchResult result = searchService.executeQueryPhase(request);
+                    MetricsLogger.logger.info("Shard {}. Query Phase. Duration {}", request.shardId(), System.currentTimeMillis()-t);
+                    return result;
                 }
             }, listener);
         } else {
@@ -339,7 +343,10 @@ public class SearchServiceTransportAction extends AbstractComponent {
             execute(new Callable<QueryFetchSearchResult>() {
                 @Override
                 public QueryFetchSearchResult call() throws Exception {
-                    return searchService.executeFetchPhase(request);
+                    MetricsLogger.logger.info("Query and Fetch Phase. Request {}, start: {}", request.id(), System.currentTimeMillis());
+                    QueryFetchSearchResult result = searchService.executeFetchPhase(request);
+                    MetricsLogger.logger.info("Query and Fetch Phase. Request {}, end: {}", request.id(), System.currentTimeMillis());
+                    return result;
                 }
             }, listener);
         } else {

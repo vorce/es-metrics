@@ -20,6 +20,7 @@
 package org.elasticsearch.action.search.type;
 
 import com.carrotsearch.hppc.IntArrayList;
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.search.ScoreDoc;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.search.ReduceSearchPhaseException;
@@ -98,7 +99,14 @@ public class TransportSearchQueryThenFetchAction extends TransportSearchTypeActi
                 QuerySearchResult queryResult = firstResults.get(entry.index);
                 DiscoveryNode node = nodes.get(queryResult.shardTarget().nodeId());
                 FetchSearchRequest fetchSearchRequest = createFetchRequest(queryResult, entry, lastEmittedDocPerShard);
-                executeFetch(entry.index, queryResult.shardTarget(), counter, fetchSearchRequest, node);
+                boolean nonLocal = !node.id().equals(nodes.localNodeId());
+                if(nonLocal) {
+                    long t = System.currentTimeMillis();
+                    executeFetch(entry.index, queryResult.shardTarget(), counter, fetchSearchRequest, node);
+                    MetricsLogger.logger.info("Request {}. Fetch Phase. Duration {}", fetchSearchRequest.id(), System.currentTimeMillis()-t);
+                } else {
+                    executeFetch(entry.index, queryResult.shardTarget(), counter, fetchSearchRequest, node);
+                }
             }
         }
 
