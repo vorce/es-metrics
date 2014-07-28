@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.suggest;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
 import org.elasticsearch.action.ShardOperationFailedException;
@@ -148,6 +149,8 @@ public class TransportSuggestAction extends TransportBroadcastOperationAction<Su
 
     @Override
     protected ShardSuggestResponse shardOperation(ShardSuggestRequest request) throws ElasticsearchException {
+        MetricsLogger.logger.info("TransportSuggectAction {}", request.shardId());
+
         IndexService indexService = indicesService.indexServiceSafe(request.index());
         IndexShard indexShard = indexService.shardSafe(request.shardId());
         final Engine.Searcher searcher = indexShard.acquireSearcher("suggest");

@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.explain;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Explanation;
 import org.elasticsearch.ElasticsearchException;
@@ -109,6 +110,8 @@ public class TransportExplainAction extends TransportShardSingleOperationAction<
     }
 
     protected ExplainResponse shardOperation(ExplainRequest request, int shardId) throws ElasticsearchException {
+        MetricsLogger.logger.info("TransportExplainActon.Java shardOperation for shard {}", shardId);
+
         IndexService indexService = indicesService.indexService(request.index());
         IndexShard indexShard = indexService.shardSafe(shardId);
         Term uidTerm = new Term(UidFieldMapper.NAME, Uid.createUidAsBytes(request.type(), request.id()));

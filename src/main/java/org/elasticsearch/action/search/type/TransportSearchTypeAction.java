@@ -149,23 +149,28 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
             }
             request.beforeStart();
             int shardIndex = -1;
+            long t1 = System.currentTimeMillis();
+            MetricsLogger.logger.info("Started Processing all shards {}", t1);
             for (final ShardIterator shardIt : shardsIts) {
                 shardIndex++;
                 final ShardRouting shard = shardIt.nextOrNull();
                 if (shard != null) {
                     boolean nonLocal = !shard.currentNodeId().equals(nodes.localNodeId());
                     if(nonLocal) {
+                        //long t = System.currentTimeMillis();
+                        performFirstPhase(shardIndex, shardIt, shard);
+                        //MetricsLogger.logger.info("Shard {}. Node {}. IsPrimary {}. State {}  Remote First Phase. Duration {}", shard.getId(), shard.currentNodeId(),shard.primary(), shard.state().value(), (System.currentTimeMillis()-t));
+                    } else {
                         long t = System.currentTimeMillis();
                         performFirstPhase(shardIndex, shardIt, shard);
-                        MetricsLogger.logger.info("Shard {}. Remote First Phase. Duration {}", shard.getId(), (System.currentTimeMillis()-t));
-                    } else {
-                        performFirstPhase(shardIndex, shardIt, shard);
+                        MetricsLogger.logger.info("Local Shard {}. Node-Id {}. IsPrimary {}  Remote First Phase. Duration {}", shard.getId(), shard.currentNodeId(),shard.primary(), (System.currentTimeMillis()-t));
                     }
                 } else {
                     // really, no shards active in this group
                     onFirstPhaseResult(shardIndex, null, null, shardIt, new NoShardAvailableActionException(shardIt.shardId()));
                 }
             }
+            MetricsLogger.logger.info("Processing all shards duration end {}. Taken {} ms", System.currentTimeMillis(), (System.currentTimeMillis()-t1));
         }
 
         void performFirstPhase(final int shardIndex, final ShardIterator shardIt, final ShardRouting shard) {
@@ -177,15 +182,17 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
                 if (node == null) {
                     onFirstPhaseResult(shardIndex, shard, null, shardIt, new NoShardAvailableActionException(shardIt.shardId()));
                 } else {
-                    long t = System.currentTimeMillis();
+                    final long start = System.currentTimeMillis();
                     String[] filteringAliases = clusterState.metaData().filteringAliases(shard.index(), request.indices());
-                    MetricsLogger.logger.info("Shard {}. First Phase index filtering, Duration {}", shard.getId(), System.currentTimeMillis()-t);
+                    MetricsLogger.logger.info("Shard {}. First Phase index filtering, Duration {}", shard.getId(), System.currentTimeMillis()-start);
+                    final long afterIndexFiltering = System.currentTimeMillis();
                     sendExecuteFirstPhase(node, internalSearchRequest(shard, shardsIts.size(), request, filteringAliases, startTime, useSlowScroll), new SearchServiceListener<FirstResult>() {
                         @Override
                         public void onResult(FirstResult result) {
-                            long t = System.currentTimeMillis();
+                            MetricsLogger.logger.info("Shard {}. First Phase Execution and Results. Got From {} . Duration {}", shard.getId(),
+                                    (result != null && result.shardTarget()!=null ? result.shardTarget().toString() : null),
+                                    System.currentTimeMillis()-afterIndexFiltering);
                             onFirstPhaseResult(shardIndex, shard, result, shardIt);
-                            MetricsLogger.logger.info("Shard {}. First Phase result processing. Duration {}", shard.getId(), System.currentTimeMillis()-t);
                         }
 
                         @Override
@@ -211,7 +218,7 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
                 try {
                     long t = System.currentTimeMillis();
                     innerMoveToSecondPhase();
-                    MetricsLogger.logger.info("Shard {}. Second Phase. Duration {}", shard.getId(), System.currentTimeMillis()-t);
+                    MetricsLogger.logger.info("Shard {}. Second Phase Execution Complete. Duration {}", shard.getId(), System.currentTimeMillis()-t);
                 } catch (Throwable e) {
                     if (logger.isDebugEnabled()) {
                         logger.debug(shardIt.shardId() + ": Failed to execute [" + request + "] while moving to second phase", e);
@@ -416,6 +423,7 @@ public abstract class TransportSearchTypeAction extends TransportAction<SearchRe
                 }
 
                 logger.trace("Moving to second phase, based on results from: {} (cluster state version: {})", sb, clusterState.version());
+                MetricsLogger.logger.info("Moving to second phase, based on results from: {} (cluster state version: {})", sb, clusterState.version());
             }
             moveToSecondPhase();
         }

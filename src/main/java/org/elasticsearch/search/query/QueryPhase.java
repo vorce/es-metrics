@@ -20,6 +20,7 @@
 package org.elasticsearch.search.query;
 
 import com.google.common.collect.ImmutableMap;
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
@@ -92,6 +93,7 @@ public class QueryPhase implements SearchPhase {
     }
 
     public void execute(SearchContext searchContext) throws QueryPhaseExecutionException {
+        long t = System.currentTimeMillis();
         // Pre-process facets and aggregations as late as possible. In the case of a DFS_Q_T_F
         // request, preProcess is called on the DFS phase phase, this is why we pre-process them
         // here to make sure it happens during the QUERY phase
@@ -169,5 +171,6 @@ public class QueryPhase implements SearchPhase {
         suggestPhase.execute(searchContext);
         facetPhase.execute(searchContext);
         aggregationPhase.execute(searchContext);
+        MetricsLogger.logger.info("SearchContext-id {} QueryPhase.execute LuceneOp Duration {}", searchContext.id(),System.currentTimeMillis()-t);
     }
 }

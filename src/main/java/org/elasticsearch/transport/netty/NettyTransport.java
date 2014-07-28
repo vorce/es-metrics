@@ -546,6 +546,7 @@ public class NettyTransport extends AbstractLifecycleComponent<Transport> implem
 
     @Override
     public void sendRequest(final DiscoveryNode node, final long requestId, final String action, final TransportRequest request, TransportRequestOptions options) throws IOException, TransportException {
+        long t = System.currentTimeMillis();
         Channel targetChannel = nodeChannel(node, options);
 
         if (compress) {

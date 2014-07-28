@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.get;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.RoutingMissingException;
 import org.elasticsearch.action.support.single.shard.TransportShardSingleOperationAction;
@@ -99,6 +100,8 @@ public class TransportGetAction extends TransportShardSingleOperationAction<GetR
 
     @Override
     protected GetResponse shardOperation(GetRequest request, int shardId) throws ElasticsearchException {
+        MetricsLogger.logger.info("TransportGetActon.Java shardOperation for shard {}", request.id);
+
         IndexService indexService = indicesService.indexServiceSafe(request.index());
         IndexShard indexShard = indexService.shardSafe(shardId);
 

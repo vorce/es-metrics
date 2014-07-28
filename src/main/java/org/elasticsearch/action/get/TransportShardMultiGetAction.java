@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.get;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.support.TransportActions;
@@ -102,6 +103,8 @@ public class TransportShardMultiGetAction extends TransportShardSingleOperationA
 
     @Override
     protected MultiGetShardResponse shardOperation(MultiGetShardRequest request, int shardId) throws ElasticsearchException {
+        MetricsLogger.logger.info("MultiGetShardResponse.Java shardOperation for shard {}", shardId);
+
         IndexService indexService = indicesService.indexServiceSafe(request.index());
         IndexShard indexShard = indexService.shardSafe(shardId);
 

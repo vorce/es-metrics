@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.index;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.RoutingMissingException;
@@ -174,6 +175,7 @@ public class TransportIndexAction extends TransportShardReplicationOperationActi
     @Override
     protected PrimaryResponse<IndexResponse, IndexRequest> shardOperationOnPrimary(ClusterState clusterState, PrimaryOperationRequest shardRequest) {
         final IndexRequest request = shardRequest.request;
+        MetricsLogger.logger.info("shardOperationOnPrimary for shard {}", shardRequest.shardId);
 
         // validate, if routing is required, that we got routing
         IndexMetaData indexMetaData = clusterState.metaData().index(request.index());

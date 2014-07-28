@@ -20,6 +20,7 @@
 package org.elasticsearch.transport;
 
 import com.google.common.collect.ImmutableMap;
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalStateException;
 import org.elasticsearch.cluster.node.DiscoveryNode;

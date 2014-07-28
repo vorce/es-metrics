@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.admin.indices.segments;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ShardOperationFailedException;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
@@ -135,6 +136,8 @@ public class TransportIndicesSegmentsAction extends TransportBroadcastOperationA
 
     @Override
     protected ShardSegments shardOperation(IndexShardSegmentRequest request) throws ElasticsearchException {
+        MetricsLogger.logger.info("shardOperation TransportSegment Action {}", request.shardId());
+
         InternalIndexService indexService = (InternalIndexService) indicesService.indexServiceSafe(request.index());
         InternalIndexShard indexShard = (InternalIndexShard) indexService.shardSafe(request.shardId());
         return new ShardSegments(indexShard.routingEntry(), indexShard.engine().segments());

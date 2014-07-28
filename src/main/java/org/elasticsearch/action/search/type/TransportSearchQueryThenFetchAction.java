@@ -101,9 +101,7 @@ public class TransportSearchQueryThenFetchAction extends TransportSearchTypeActi
                 FetchSearchRequest fetchSearchRequest = createFetchRequest(queryResult, entry, lastEmittedDocPerShard);
                 boolean nonLocal = !node.id().equals(nodes.localNodeId());
                 if(nonLocal) {
-                    long t = System.currentTimeMillis();
                     executeFetch(entry.index, queryResult.shardTarget(), counter, fetchSearchRequest, node);
-                    MetricsLogger.logger.info("Request {}. Fetch Phase. Duration {}", fetchSearchRequest.id(), System.currentTimeMillis()-t);
                 } else {
                     executeFetch(entry.index, queryResult.shardTarget(), counter, fetchSearchRequest, node);
                 }
@@ -111,6 +109,7 @@ public class TransportSearchQueryThenFetchAction extends TransportSearchTypeActi
         }
 
         void executeFetch(final int shardIndex, final SearchShardTarget shardTarget, final AtomicInteger counter, final FetchSearchRequest fetchSearchRequest, DiscoveryNode node) {
+            final long start = System.currentTimeMillis();
             searchService.sendExecuteFetch(node, fetchSearchRequest, new SearchServiceListener<FetchSearchResult>() {
                 @Override
                 public void onResult(FetchSearchResult result) {
@@ -119,6 +118,7 @@ public class TransportSearchQueryThenFetchAction extends TransportSearchTypeActi
                     if (counter.decrementAndGet() == 0) {
                         finishHim();
                     }
+                    MetricsLogger.logger.info("Request {}. Shards {}. Second Phase Fetch Complete . Duration {}", fetchSearchRequest.id(), shardTarget.getShardId(), System.currentTimeMillis()-start);
                 }
 
                 @Override

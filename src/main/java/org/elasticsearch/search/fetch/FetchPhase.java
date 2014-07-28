@@ -20,6 +20,7 @@
 package org.elasticsearch.search.fetch;
 
 import com.google.common.collect.ImmutableMap;
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.ReaderUtil;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
@@ -82,6 +83,7 @@ public class FetchPhase implements SearchPhase {
     }
 
     public void execute(SearchContext context) {
+        long t = System.currentTimeMillis();
         FieldsVisitor fieldsVisitor;
         List<String> extractFieldNames = null;
 
@@ -220,6 +222,7 @@ public class FetchPhase implements SearchPhase {
         }
 
         context.fetchResult().hits(new InternalSearchHits(hits, context.queryResult().topDocs().totalHits, context.queryResult().topDocs().getMaxScore()));
+        MetricsLogger.logger.info("SearchContext {}. Fetch Phase Duration {}", context.id(), System.currentTimeMillis() - t);
     }
 
     private void loadStoredFields(SearchContext context, FieldsVisitor fieldVisitor, int docId) {

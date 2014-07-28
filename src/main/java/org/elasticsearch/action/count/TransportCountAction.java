@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.count;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ShardOperationFailedException;
@@ -164,6 +165,8 @@ public class TransportCountAction extends TransportBroadcastOperationAction<Coun
 
     @Override
     protected ShardCountResponse shardOperation(ShardCountRequest request) throws ElasticsearchException {
+        MetricsLogger.logger.info("ShardCountResponse for shard {}", request.shardId());
+
         IndexService indexService = indicesService.indexServiceSafe(request.index());
         IndexShard indexShard = indexService.shardSafe(request.shardId());
 

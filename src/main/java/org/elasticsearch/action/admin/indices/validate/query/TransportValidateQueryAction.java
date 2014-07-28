@@ -19,6 +19,7 @@
 
 package org.elasticsearch.action.admin.indices.validate.query;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ShardOperationFailedException;
@@ -174,6 +175,8 @@ public class TransportValidateQueryAction extends TransportBroadcastOperationAct
 
     @Override
     protected ShardValidateQueryResponse shardOperation(ShardValidateQueryRequest request) throws ElasticsearchException {
+        MetricsLogger.logger.info("ShardValidateQueryResponse for shard {}", request.shardId());
+
         IndexQueryParserService queryParserService = indicesService.indexServiceSafe(request.index()).queryParserService();
         IndexService indexService = indicesService.indexServiceSafe(request.index());
         IndexShard indexShard = indexService.shardSafe(request.shardId());

@@ -211,6 +211,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
                 }
             }, listener);
         } else {
+            final long transportStartTime = System.currentTimeMillis();
             transportService.sendRequest(node, SearchQueryTransportHandler.ACTION, request, new BaseTransportResponseHandler<QuerySearchResult>() {
 
                 @Override
@@ -221,6 +222,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
                 @Override
                 public void handleResponse(QuerySearchResult response) {
                     listener.onResult(response);
+                    MetricsLogger.logger.info("Shard {} Transport Req Processing Time {}", request.shardId(), System.currentTimeMillis()-transportStartTime);
                 }
 
                 @Override
@@ -409,7 +411,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
         }
     }
 
-    public void sendExecuteFetch(DiscoveryNode node, final FetchSearchRequest request, final SearchServiceListener<FetchSearchResult> listener) {
+    public void sendExecuteFetch(final DiscoveryNode node, final FetchSearchRequest request, final SearchServiceListener<FetchSearchResult> listener) {
         if (clusterService.state().nodes().localNodeId().equals(node.id())) {
             execute(new Callable<FetchSearchResult>() {
                 @Override
@@ -418,6 +420,8 @@ public class SearchServiceTransportAction extends AbstractComponent {
                 }
             }, listener);
         } else {
+            final String nodeId = node.id();
+            final long start = System.currentTimeMillis();
             transportService.sendRequest(node, SearchFetchByIdTransportHandler.ACTION, request, new BaseTransportResponseHandler<FetchSearchResult>() {
 
                 @Override
@@ -428,6 +432,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
                 @Override
                 public void handleResponse(FetchSearchResult response) {
                     listener.onResult(response);
+                    MetricsLogger.logger.info("Request {}. Node {}. TransportService-sendExecuteFetch . Duration {}", request.id(), nodeId , System.currentTimeMillis()-start);
                 }
 
                 @Override
@@ -671,6 +676,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(ShardSearchRequest request, TransportChannel channel) throws Exception {
+            MetricsLogger.logger.info("SearchServiceTransportAction MessageRecieved: SearchDfsTransportHandler");
             DfsSearchResult result = searchService.executeDfsPhase(request);
             channel.sendResponse(result);
         }
@@ -692,7 +698,9 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(ShardSearchRequest request, TransportChannel channel) throws Exception {
+            long t = System.currentTimeMillis();
             QuerySearchResult result = searchService.executeQueryPhase(request);
+            MetricsLogger.logger.info("Shard {}. SearchQueryTransportHandler: executeQueryPhase Duration {} ", request.shardId(),System.currentTimeMillis()-t);
             channel.sendResponse(result);
         }
 
@@ -713,7 +721,10 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(QuerySearchRequest request, TransportChannel channel) throws Exception {
+            long t = System.currentTimeMillis();
             QuerySearchResult result = searchService.executeQueryPhase(request);
+            MetricsLogger.logger.info("Request {} SearchQueryBy-Id-TransportHandler. Duration {}",
+                    request.id(),System.currentTimeMillis()-t);
             channel.sendResponse(result);
         }
 
@@ -734,6 +745,8 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(InternalScrollSearchRequest request, TransportChannel channel) throws Exception {
+            MetricsLogger.logger.info("SearchServiceTransportAction MessageRecieved: SearchQueryScrollTransportHandler");
+
             ScrollQuerySearchResult result = searchService.executeQueryPhase(request);
             channel.sendResponse(result);
         }
@@ -755,6 +768,8 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(ShardSearchRequest request, TransportChannel channel) throws Exception {
+            MetricsLogger.logger.info("SearchServiceTransportAction MessageRecieved: SearchQueryFetchTransportHandler");
+
             QueryFetchSearchResult result = searchService.executeFetchPhase(request);
             channel.sendResponse(result);
         }
@@ -776,6 +791,8 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(QuerySearchRequest request, TransportChannel channel) throws Exception {
+            MetricsLogger.logger.info("SearchServiceTransportAction MessageRecieved: SearchQueryQueryFetchTransportHandler X");
+
             QueryFetchSearchResult result = searchService.executeFetchPhase(request);
             channel.sendResponse(result);
         }
@@ -797,8 +814,10 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(FetchSearchRequest request, TransportChannel channel) throws Exception {
+            long t = System.currentTimeMillis();
             FetchSearchResult result = searchService.executeFetchPhase(request);
             channel.sendResponse(result);
+            MetricsLogger.logger.info("SearchFetchById Fetch Complete {}. Duration {}", request.id(), System.currentTimeMillis() - t);
         }
 
         @Override
@@ -818,6 +837,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(InternalScrollSearchRequest request, TransportChannel channel) throws Exception {
+            MetricsLogger.logger.info("SearchServiceTransportAction MessageRecieved: SearchQueryFetchScrollTransportHandler X");
             ScrollQueryFetchSearchResult result = searchService.executeFetchPhase(request);
             channel.sendResponse(result);
         }
@@ -839,6 +859,8 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(ShardSearchRequest request, TransportChannel channel) throws Exception {
+            MetricsLogger.logger.info("SearchServiceTransportAction MessageRecieved: SearchScanTransportHandler X");
+
             QuerySearchResult result = searchService.executeScan(request);
             channel.sendResponse(result);
         }
@@ -860,6 +882,7 @@ public class SearchServiceTransportAction extends AbstractComponent {
 
         @Override
         public void messageReceived(InternalScrollSearchRequest request, TransportChannel channel) throws Exception {
+            MetricsLogger.logger.info("SearchServiceTransportAction MessageRecieved: SearchScanScrollTransportHandler X");
             ScrollQueryFetchSearchResult result = searchService.executeScan(request);
             channel.sendResponse(result);
         }

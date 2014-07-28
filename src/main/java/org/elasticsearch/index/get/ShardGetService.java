@@ -21,6 +21,7 @@ package org.elasticsearch.index.get;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.index.Term;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ElasticsearchIllegalArgumentException;
@@ -100,6 +101,8 @@ public class ShardGetService extends AbstractIndexShardComponent {
 
     public GetResult get(String type, String id, String[] gFields, boolean realtime, long version, VersionType versionType, FetchSourceContext fetchSourceContext)
             throws ElasticsearchException {
+        MetricsLogger.logger.info("ShardGetService.Java get above {}",id);
+
         currentMetric.inc();
         try {
             long now = System.nanoTime();
@@ -124,6 +127,8 @@ public class ShardGetService extends AbstractIndexShardComponent {
      * Note: Call <b>must</b> release engine searcher associated with engineGetResult!
      */
     public GetResult get(Engine.GetResult engineGetResult, String id, String type, String[] fields, FetchSourceContext fetchSourceContext) {
+        MetricsLogger.logger.info("ShardGetService.Java get below {}",id);
+
         if (!engineGetResult.exists()) {
             return new GetResult(shardId.index().name(), type, id, -1, false, null, null);
         }

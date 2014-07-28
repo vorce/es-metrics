@@ -23,6 +23,7 @@ import com.carrotsearch.hppc.ObjectOpenHashSet;
 import com.carrotsearch.hppc.ObjectSet;
 import com.carrotsearch.hppc.cursors.ObjectCursor;
 import com.google.common.collect.ImmutableMap;
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.search.TopDocs;
@@ -183,11 +184,13 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
     }
 
     public DfsSearchResult executeDfsPhase(ShardSearchRequest request) throws ElasticsearchException {
+        long t = System.currentTimeMillis();
         SearchContext context = createAndPutContext(request);
         try {
             contextProcessing(context);
             dfsPhase.execute(context);
             contextProcessedSuccessfully(context);
+            MetricsLogger.logger.info("Shard {}. ExecuteDfsPhase , Duration {}", request.shardId(), System.currentTimeMillis()-t);
             return context.dfsResult();
         } catch (Throwable e) {
             logger.trace("Dfs phase failed", e);
@@ -294,6 +297,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
     }
 
     public QuerySearchResult executeQueryPhase(QuerySearchRequest request) throws ElasticsearchException {
+        long t = System.currentTimeMillis();
         SearchContext context = findContext(request.id());
         contextProcessing(context);
         try {
@@ -309,6 +313,7 @@ public class SearchService extends AbstractLifecycleComponent<SearchService> {
             queryPhase.execute(context);
             contextProcessedSuccessfully(context);
             context.indexShard().searchService().onQueryPhase(context, System.nanoTime() - time);
+            MetricsLogger.logger.info("Request {} SearchService.executeQueryPhase Got QuerySearchResult Duration {}", request.id(), System.currentTimeMillis()-t);
             return context.queryResult();
         } catch (Throwable e) {
             context.indexShard().searchService().onFailedQueryPhase(context);

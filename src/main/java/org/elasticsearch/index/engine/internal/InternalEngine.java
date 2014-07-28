@@ -32,6 +32,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.meltwater.metrics.MetricsLogger;
 import org.apache.lucene.index.*;
 import org.apache.lucene.index.IndexWriter.IndexReaderWarmer;
 import org.apache.lucene.search.IndexSearcher;
@@ -320,6 +321,8 @@ public class InternalEngine extends AbstractIndexShardComponent implements Engin
     }
 
     public GetResult get(Get get) throws EngineException {
+        MetricsLogger.logger.info("InternalEngine get");
+
         try (InternalLock _ = readLock.acquire()) {
             if (get.realtime()) {
                 VersionValue versionValue = versionMap.get(versionKey(get.uid()));
